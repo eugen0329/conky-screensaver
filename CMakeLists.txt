@@ -47,7 +47,7 @@ set(TARGET_NAME "bin")
 set(TARGET ${TARGET_NAME})
 set(SRC_DIR "src/")
 
-set (CMAKE_C_FLAGS "-Wall")
+set (CMAKE_C_FLAGS "-Wall -lXss -lX11")
 
 file(GLOB_RECURSE SRC_NAMES ${SRC_DIR}*.c)
 add_executable(${TARGET} ${SRC_NAMES})
