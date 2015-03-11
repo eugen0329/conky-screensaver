@@ -27,7 +27,7 @@ typedef enum { false = 0, true = 1} bool_t;
 static XScreenSaverInfo *info;
 static Display *display;
 
-void waitIdle(unsigned long timeout, const timespec_t * checkRate);
+void waitIdle(unsigned long timeout, const timespec_t * refreshRate);
 
 int main(int argc, char *argv[])
 {
@@ -39,10 +39,12 @@ int main(int argc, char *argv[])
     if(onIdleTimeout > ULONG_MAX) abortem("Idle timeout is too large");
 
 
-    if(display == NULL && (display = XOpenDisplay(0)) == NULL)
+    if((display = XOpenDisplay(0)) == NULL)
         abortem("XOpenDisplay");
-    if(info == NULL && (info = XScreenSaverAllocInfo()) == NULL)
-        abortem("XOpenDisplay");
+    if((info = XScreenSaverAllocInfo()) == NULL) {
+        XCloseDisplay(display);
+        abortem("XScreenSaverAllocInfo");
+    }
 
     waitIdle(onIdleTimeout, &onIdleRefreshRate);
     printf("Specified idle time (%lu ms) is reached.\n", onIdleTimeout);
@@ -54,10 +56,10 @@ int main(int argc, char *argv[])
 }
 
 
-void waitIdle(unsigned long timeout, const timespec_t * checkRate)
+void waitIdle(unsigned long timeout, const timespec_t * refreshRate)
 {
     do {
-        nanosleep(checkRate, NULL);
+        nanosleep(refreshRate, NULL);
         XScreenSaverQueryInfo(display, DefaultRootWindow(display), info);
     } while(info->idle < timeout);
 }

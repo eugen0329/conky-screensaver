@@ -17,12 +17,12 @@ endif()
 set(REQ_ERR_COUNTER 0)
 
 if(NOT UNIX)
-  message(FATAL_ERROR "${BOLD_RED}Only Unix or Unix-like OS required!!!${RESET_COLOR}")
+    message(FATAL_ERROR "${BOLD_RED}Only Unix or Unix-like OS required!!!${RESET_COLOR}")
 endif()
 
 find_package(PkgConfig REQUIRED)
 if(NOT PKG_CONFIG_FOUND)
-  message(FATAL_ERROR "${BOLD_BLUE}Pkg-confing not found${RESET_COLOR}")
+    message(FATAL_ERROR "${BOLD_BLUE}Pkg-confing not found${RESET_COLOR}")
 endif()
 
 
@@ -33,9 +33,9 @@ if(NOT LIBNOTIFY_FOUND)
 endif()
 
 if(REQ_ERR_COUNTER EQUAL 0)
-  message(STATUS "${BOLD_BLUE}Requirement successfully found. No error occured.${RESET_COLOR}")
+    message(STATUS "${BOLD_BLUE}Requirement successfully found. No error occured.${RESET_COLOR}")
 elseif()
-    message(SEND_ERROR "${BOLD_RED} Errors: ${REQ_ERR_COUNTER}${RESET_COLOR" )
+    message(SEND_ERROR "${BOLD_RED} Errors: ${REQ_ERR_COUNTER}${RESET_COLOR}" )
     return()
 endif()
 
