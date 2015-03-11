@@ -29,13 +29,18 @@ typedef enum { false = 0, true = 1} bool_t;
 
 void waitIdle(unsigned long timeout, const timespec_t * refreshRate);
 void waitXScreensaverUnblanked(const timespec_t * refreshRate);
-pid_t runXScreensaver();
+pid_t startScreensaver();
+void initDaemon();
+
+static const char DEFAULT_DISPLAY[] = "\":0.0\"";
 
 static XScreenSaverInfo *info;
 static Display *display;
 
 int main(int argc, char *argv[])
 {
+    initDaemon();
+
     unsigned long onIdleTimeout = MIN_TO_MSEC(1./60);
     timespec_t onIdleRefreshRate = {
         .tv_sec = 0,
@@ -48,20 +53,10 @@ int main(int argc, char *argv[])
     if(onIdleTimeout > ULONG_MAX) abortem("Idle timeout is too large");
 
 
-    if((display = XOpenDisplay(0)) == NULL)
-        abortem("XOpenDisplay");
-    if((info = XScreenSaverAllocInfo()) == NULL) {
-        XCloseDisplay(display);
-        abortem("XScreenSaverAllocInfo");
-    }
-
     waitIdle(onIdleTimeout, &onIdleRefreshRate);
     printf("Specified idle time (%lu ms) is reached.\n", onIdleTimeout);
 
-    system("killall xscreensaver 2>/dev/null");
-    system("export DISPLAY=\":0.0\"");
-    pid_t xscrPid = runXScreensaver();
-
+    pid_t xscrPid = startScreensaver();
     system("xscreensaver-command -activate");
 
     waitXScreensaverUnblanked(&onBlankedRefreshRate);
@@ -75,7 +70,23 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-pid_t runXScreensaver()
+void initDaemon()
+{
+    system("killall xscreensaver 2>/dev/null");
+
+    char setDispCmd[BUF_SIZE];
+    snprintf(setDispCmd, sizeof(setDispCmd), "export DISPLAY=%s", DEFAULT_DISPLAY);
+    system(setDispCmd);
+
+    if((display = XOpenDisplay(0)) == NULL)
+        abortem("XOpenDisplay");
+    if((info = XScreenSaverAllocInfo()) == NULL) {
+        XCloseDisplay(display);
+        abortem("XScreenSaverAllocInfo");
+    }
+}
+
+pid_t startScreensaver()
 {
     pid_t cpid = fork();
 
@@ -98,9 +109,11 @@ void waitIdle(unsigned long timeout, const timespec_t * refreshRate)
 
 void waitXScreensaverUnblanked(const timespec_t * refreshRate)
 {
-    const char cmd[] =
-        "[[ \"$(xscreensaver-command -time)\" == *\"non-blanked\"* ]] && echo -n 0 || echo -n 1";
     char output[BUF_SIZE];
+    char cmd[BUF_SIZE];
+
+    snprintf(cmd, sizeof(cmd),
+        "[[ \"$(xscreensaver-command -time)\" == *\"non-blanked\"* ]] && echo -n %hu || echo -n %hu", true, false);
 
     FILE *pipe;
     uint8_t repeat = true;
@@ -109,7 +122,7 @@ void waitXScreensaverUnblanked(const timespec_t * refreshRate)
         if ( (pipe = popen(cmd, "r")) == NULL) abortem("popen");
         system(cmd);
         fgets(output, sizeof(output), pipe);
-        if(CH_TO_INT(output[0]) == 0) repeat = false;
+        if(CH_TO_INT(output[0]) == true) repeat = false;
         pclose(pipe);
     }
 }
