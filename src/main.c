@@ -29,6 +29,7 @@ typedef enum { false = 0, true = 1} bool_t;
 
 void waitIdle(unsigned long timeout, const timespec_t * refreshRate);
 void waitXScreensaverUnblanked(const timespec_t * refreshRate);
+pid_t runXScreensaver();
 
 static XScreenSaverInfo *info;
 static Display *display;
@@ -57,19 +58,34 @@ int main(int argc, char *argv[])
     waitIdle(onIdleTimeout, &onIdleRefreshRate);
     printf("Specified idle time (%lu ms) is reached.\n", onIdleTimeout);
 
-    system("killall xscreensaver");
-    system("export DISPLAY=\":0.0\"; xscreensaver -no-splash &");
+    system("killall xscreensaver 2>/dev/null");
+    system("export DISPLAY=\":0.0\"");
+    pid_t xscrPid = runXScreensaver();
+
     system("xscreensaver-command -activate");
 
     waitXScreensaverUnblanked(&onBlankedRefreshRate);
     puts("\n\nExiting XScreensaver");
+    kill(xscrPid, SIGKILL);
 
 
-    system("killall xscreensaver");
     XFree(info);
     XCloseDisplay(display);
 
     return EXIT_SUCCESS;
+}
+
+pid_t runXScreensaver()
+{
+    pid_t cpid = fork();
+
+    if(cpid == FORK_SUCCESS) {
+        char * cargv[] = {"/usr/bin/xscreensaver", "-no-splash", NULL};
+        if(execvp(cargv[0], &cargv[0]) == RVAL_ERR) abortem("exec");
+    } else if(cpid == FORK_ERR)
+        abortem("fork");
+
+    return cpid;
 }
 
 void waitIdle(unsigned long timeout, const timespec_t * refreshRate)
