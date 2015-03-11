@@ -9,6 +9,7 @@
 
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <signal.h>
 
 #include <X11/extensions/scrnsaver.h>
@@ -27,10 +28,11 @@
 typedef struct timespec timespec_t;
 typedef enum { false = 0, true = 1} bool_t;
 
+void initDaemon();
+pid_t startScreensaver();
+void xscreensaverCommand(const char * cmd);
 void waitIdle(unsigned long timeout, const timespec_t * refreshRate);
 void waitXScreensaverUnblanked(const timespec_t * refreshRate);
-pid_t startScreensaver();
-void initDaemon();
 
 static const char DEFAULT_DISPLAY[] = "\":0.0\"";
 
@@ -57,7 +59,7 @@ int main(int argc, char *argv[])
     printf("Specified idle time (%lu ms) is reached.\n", onIdleTimeout);
 
     pid_t xscrPid = startScreensaver();
-    system("xscreensaver-command -activate");
+    xscreensaverCommand("-activate");
 
     waitXScreensaverUnblanked(&onBlankedRefreshRate);
     puts("\n\nExiting XScreensaver");
@@ -109,21 +111,37 @@ void waitIdle(unsigned long timeout, const timespec_t * refreshRate)
 
 void waitXScreensaverUnblanked(const timespec_t * refreshRate)
 {
-    char output[BUF_SIZE];
+    char cmdOutp[BUF_SIZE];
     char cmd[BUF_SIZE];
 
     snprintf(cmd, sizeof(cmd),
-        "[[ \"$(xscreensaver-command -time)\" == *\"non-blanked\"* ]] && echo -n %hu || echo -n %hu", true, false);
+        "[[ \"`xscreensaver-command -time`\" == *\"non-blanked\"* ]]"
+        "&& echo -n %hu || echo -n %hu", true, false);
 
     FILE *pipe;
     uint8_t repeat = true;
     while(repeat) {
         nanosleep(refreshRate, NULL);
+
         if ( (pipe = popen(cmd, "r")) == NULL) abortem("popen");
         system(cmd);
-        fgets(output, sizeof(output), pipe);
-        if(CH_TO_INT(output[0]) == true) repeat = false;
+        fgets(cmdOutp, sizeof(cmdOutp), pipe);
+        if(CH_TO_INT(cmdOutp[0]) == true) repeat = false;
         pclose(pipe);
     }
+}
+
+void xscreensaverCommand(const char * cmd)
+{
+    pid_t cpid = fork();
+
+    if(cpid == FORK_SUCCESS) {
+        char *const cargv[3] =
+            {"/usr/bin/xscreensaver-command", cmd, NULL};
+        if(execvp(cargv[0], &cargv[0]) == RVAL_ERR) abortem("exec");
+    } else if(cpid == FORK_ERR)
+        abortem("fork");
+
+    waitpid(cpid, NULL, 0);
 }
 
