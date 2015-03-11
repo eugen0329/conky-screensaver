@@ -21,12 +21,12 @@
 #define FORK_ERR  -1
 #define RVAL_ERR  -1
 
-#define TO_NANO_SEC( x )  ( x * 1000000000 )
-#define MIN_TO_MSEC( x )  ( x * 60 * 1000 )
-#define CH_TO_INT( x )  ( x - '0' )
-
-typedef struct timespec timespec_t;
-typedef enum { false = 0, true = 1} bool_t;
+typedef struct {
+    unsigned long onIdleTimeout;
+    timespec_t onIdleRefreshRate;
+    timespec_t onBlankedRefreshRate;
+    char display[BUF_SIZE];
+} daemonConfigs_T;
 
 void initDaemon();
 pid_t startScreensaver();
@@ -34,50 +34,50 @@ void xscreensaverCommand(const char * cmd);
 void waitIdle(unsigned long timeout, const timespec_t * refreshRate);
 void waitXScreensaverUnblanked(const timespec_t * refreshRate);
 
-static const char DEFAULT_DISPLAY[] = "\":0.0\"";
+
+const static daemonConfigs_T DEFAULTS = {
+    .onIdleTimeout = MIN_TO_MSEC(1./60),
+    .onIdleRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
+    .onBlankedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
+    .display = "\":0.0\""
+};
 
 static XScreenSaverInfo *info;
 static Display *display;
+static daemonConfigs_T * configs;
 
 int main(int argc, char *argv[])
 {
     initDaemon();
 
-    unsigned long onIdleTimeout = MIN_TO_MSEC(1./60);
-    timespec_t onIdleRefreshRate = {
-        .tv_sec = 0,
-        .tv_nsec = TO_NANO_SEC(0.2)
-    };
-    timespec_t onBlankedRefreshRate = {
-        .tv_sec = 0,
-        .tv_nsec = TO_NANO_SEC(0.2)
-    };
-    if(onIdleTimeout > ULONG_MAX) abortem("Idle timeout is too large");
-
-
-    waitIdle(onIdleTimeout, &onIdleRefreshRate);
-    printf("Specified idle time (%lu ms) is reached.\n", onIdleTimeout);
+    waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);
+    printf("Specified idle time (%lu ms) is reached.\n", configs->onIdleTimeout);
 
     pid_t xscrPid = startScreensaver();
     xscreensaverCommand("-activate");
 
-    waitXScreensaverUnblanked(&onBlankedRefreshRate);
+    waitXScreensaverUnblanked(&configs->onBlankedRefreshRate);
     puts("\n\nExiting XScreensaver");
     kill(xscrPid, SIGKILL);
 
-
     XFree(info);
     XCloseDisplay(display);
+    free(configs);
 
     return EXIT_SUCCESS;
 }
 
 void initDaemon()
 {
-    system("killall xscreensaver 2>/dev/null");
+    system("killall xscreensaver &>/dev/null");
+
+    configs = malloc(sizeof(daemonConfigs_T));
+    memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_T));
+    //if(configs->onIdleTimeout > ULONG_MAX) abortem("Idle timeout is too large");
 
     char setDispCmd[BUF_SIZE];
-    snprintf(setDispCmd, sizeof(setDispCmd), "export DISPLAY=%s", DEFAULT_DISPLAY);
+    snprintf(setDispCmd, sizeof(setDispCmd),
+            "export DISPLAY=%s", configs->display);
     system(setDispCmd);
 
     if((display = XOpenDisplay(0)) == NULL)
