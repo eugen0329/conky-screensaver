@@ -42,7 +42,10 @@ void waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate);
 void termhdl(int);
 pid_t appendBackground();
 
-
+void (*currState)();
+void onIdle();
+void onBlanked();
+void onLocked();
 
 const static daemonConfigs_t DEFAULTS = {
     .onIdleTimeout = MIN_TO_MSEC(1./60),
@@ -56,34 +59,21 @@ static XScreenSaverInfo *info;
 static Display *display;
 static daemonConfigs_t * configs;
 bool_t isTerminated = false;
+static pid_t bgPid;
+static pid_t xscrPid;
+
 
 int main(int argc, char *argv[])
 {
-    pid_t xscrPid;
-    pid_t lockerPid;
-    pid_t bgPid;
     /*uint8_t waitStatus;*/
+    currState = onIdle;
 
     initDaemon();
+    xscrPid = startScreensaver();
     puts("Daemon is ready");
 
     while(true) {
-        puts("Start again");
-        waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);
-        /*waitStatus = waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);*/
-        /*if(waitStatus == EXIT_FAILURE) break;*/
-        bgPid = appendBackground();
-        printf("Specified idle time (%lu ms) is reached.\n", configs->onIdleTimeout);
-
-        xscrPid = startScreensaver();
-        xscreensaverCommand("-activate");
-
-        waitXScreensaverUnblanked(&configs->onBlankedRefreshRate);
-        puts("\n\nExiting XScreensaver");
-
-        lockerPid = runScrLocker();
-        waitUnlocked(lockerPid, &configs->onLockedRefreshRate);
-        kill(bgPid, SIGKILL);
+        (*currState)();
     }
 
     puts("Release of resources");
@@ -93,6 +83,32 @@ int main(int argc, char *argv[])
     XCloseDisplay(display);
 
     return EXIT_SUCCESS;
+}
+
+void onIdle()
+{
+    puts("Start again");
+    waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);
+    bgPid = appendBackground();
+    printf("Specified idle time (%lu ms) is reached.\n", configs->onIdleTimeout);
+    currState = &onBlanked;
+}
+
+void onBlanked()
+{
+    xscreensaverCommand("-activate");
+    waitXScreensaverUnblanked(&configs->onBlankedRefreshRate);
+    puts("\n\nExiting XScreensaver");
+    currState = &onLocked;
+}
+
+void onLocked()
+{
+    pid_t lockerPid;
+    lockerPid = runScrLocker();
+    waitUnlocked(lockerPid, &configs->onLockedRefreshRate);
+    kill(bgPid, SIGKILL);
+    currState = onIdle;
 }
 
 void waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate)
@@ -120,7 +136,6 @@ pid_t appendBackground()
         gtk_init(NULL, NULL);
         window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_widget_realize(window);
-        /*gtk_window_fullscreen((struct GtkWindow *)window);*/
         gtk_window_fullscreen((GtkWindow*) window);
         color.red = 0x0;
         color.green = 0x0;
@@ -138,7 +153,6 @@ void termhdl(int notused)
 {
     isTerminated = true;
 }
-
 
 void initDaemon()
 {
