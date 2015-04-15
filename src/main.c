@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,21 +26,24 @@ typedef struct {
     unsigned long onIdleTimeout;
     timespec_t onIdleRefreshRate;
     timespec_t onBlankedRefreshRate;
+    timespec_t onLockedRefreshRate;
     char display[BUF_SIZE];
 } daemonConfigs_T;
 
 void initDaemon();
 pid_t startScreensaver();
-void xscreensaverCommand(const char * cmd);
+void xscreensaverCommand(char * cmd);
 void waitIdle(unsigned long timeout, const timespec_t * refreshRate);
 void waitXScreensaverUnblanked(const timespec_t * refreshRate);
 pid_t runScrLocker();
+void waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate);
 
 
 const static daemonConfigs_T DEFAULTS = {
     .onIdleTimeout = MIN_TO_MSEC(1./60),
     .onIdleRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
     .onBlankedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
+    .onLockedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
     .display = "\":0.0\""
 };
 
@@ -49,27 +53,21 @@ static daemonConfigs_T * configs;
 
 int main(int argc, char *argv[])
 {
+    pid_t xscrPid;
+    pid_t lockerPid;
+
     initDaemon();
     waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);
     printf("Specified idle time (%lu ms) is reached.\n", configs->onIdleTimeout);
 
-    pid_t xscrPid = startScreensaver();
+    xscrPid = startScreensaver();
     xscreensaverCommand("-activate");
 
     waitXScreensaverUnblanked(&configs->onBlankedRefreshRate);
     puts("\n\nExiting XScreensaver");
 
-    pid_t lockerPid = runScrLocker();
-    while(true) {
-        pid_t result = waitpid(lockerPid, NULL, WNOHANG);
-        if (result == 0) {
-            printf("scrlocker is alive\n");
-        } else {
-            printf("scrlocker is dead\n");
-            break;
-        }
-    }
-
+    lockerPid = runScrLocker();
+    waitUnlocked(lockerPid, &configs->onLockedRefreshRate);
 
 
     kill(xscrPid, SIGKILL);
@@ -80,15 +78,33 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
+void waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate)
+{
+    pid_t result;
+    while(true) {
+        nanosleep(refreshRate, NULL);
+        result = waitpid(lockerPid, NULL, WNOHANG);
+        if (result == 0) {
+            printf("scrlocker is alive\n");
+        } else {
+            printf("scrlocker is dead\n");
+            break;
+        }
+    }
+}
+
 void initDaemon()
 {
+    struct sigaction act;
+    sigset_t mask;
+    char setDispCmd[BUF_SIZE];
+
     system("killall xscreensaver &>/dev/null");
 
     configs = malloc(sizeof(daemonConfigs_T));
     memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_T));
     //if(configs->onIdleTimeout > ULONG_MAX) abortem("Idle timeout is too large");
 
-    char setDispCmd[BUF_SIZE];
     snprintf(setDispCmd, sizeof(setDispCmd),
             "export DISPLAY=%s", configs->display);
     system(setDispCmd);
@@ -99,6 +115,9 @@ void initDaemon()
         XCloseDisplay(display);
         abortem("XScreenSaverAllocInfo");
     }
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGQUIT);
+    if(sigaction(SIGINT, &act, NULL) == RVAL_ERR ) abortem("sigaction");
 }
 
 pid_t startScreensaver()
@@ -138,13 +157,13 @@ void waitXScreensaverUnblanked(const timespec_t * refreshRate)
 {
     char cmdOutp[BUF_SIZE];
     char cmd[BUF_SIZE];
+    FILE *pipe;
+    uint8_t repeat = true;
 
     snprintf(cmd, sizeof(cmd),
         "[[ \"`xscreensaver-command -time`\" == *\"non-blanked\"* ]]"
         "&& echo -n %hu || echo -n %hu", true, false);
 
-    FILE *pipe;
-    uint8_t repeat = true;
     while(repeat) {
         nanosleep(refreshRate, NULL);
 
@@ -156,13 +175,13 @@ void waitXScreensaverUnblanked(const timespec_t * refreshRate)
     }
 }
 
-void xscreensaverCommand(const char * cmd)
+void xscreensaverCommand(char * cmd)
 {
+    char *const cargv[3] =
+        {"/usr/bin/xscreensaver-command", cmd, NULL};
     pid_t cpid = fork();
 
     if(cpid == FORK_SUCCESS) {
-        char *const cargv[3] =
-            {"/usr/bin/xscreensaver-command", cmd, NULL};
         if(execvp(cargv[0], &cargv[0]) == RVAL_ERR) abortem("exec");
     } else if(cpid == FORK_ERR)
         abortem("fork");
