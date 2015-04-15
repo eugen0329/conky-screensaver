@@ -32,6 +32,13 @@ if(NOT LIBNOTIFY_FOUND)
     MATH(EXPR REQ_ERR_COUNTER ${ERR_COUNTER}+1)
 endif()
 
+pkg_check_modules(GTK REQUIRED "gtk+-2.0")
+if(NOT GTK_FOUND)
+    message(STATUS "Gtk+ 2.0 not found")
+    MATH(EXPR REQ_ERR_COUNTER ${ERR_COUNTER}+1)
+endif()
+
+
 if(REQ_ERR_COUNTER EQUAL 0)
     message(STATUS "${BOLD_BLUE}Requirement successfully found. No error occured.${RESET_COLOR}")
 elseif()
@@ -47,7 +54,8 @@ set(TARGET_NAME "bin")
 set(TARGET ${TARGET_NAME})
 set(SRC_DIR "src/")
 
-set (CMAKE_C_FLAGS "-std=c99 -Wall -pedantic-errors -lXss -lX11")
+#set (CMAKE_C_FLAGS "-std=c99 -Wall -pedantic-errors -lXss -lX11")
+set (CMAKE_C_FLAGS "-std=c99 -Wall -lXss -lX11")
 
 file(GLOB_RECURSE SRC_NAMES ${SRC_DIR}*.c)
 add_executable(${TARGET} ${SRC_NAMES})
@@ -59,12 +67,13 @@ add_executable(${TARGET} ${SRC_NAMES})
 include_directories(
     ${PROJECT_BINARY_DIR}
     ${SRC_DIR}
-    ${LIBNOTIFY_INCLUDE_DIRS}
+    ${GTK_INCLUDE_DIRS}
 )
 
 target_link_libraries(
     ${TARGET}
     ${LIBNOTIFY_LIBRARIES}
+    ${GTK_LIBRARIES}
 )
 
 
