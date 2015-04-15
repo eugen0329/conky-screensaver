@@ -33,6 +33,7 @@ pid_t startScreensaver();
 void xscreensaverCommand(const char * cmd);
 void waitIdle(unsigned long timeout, const timespec_t * refreshRate);
 void waitXScreensaverUnblanked(const timespec_t * refreshRate);
+pid_t runScrLocker();
 
 
 const static daemonConfigs_T DEFAULTS = {
@@ -49,7 +50,6 @@ static daemonConfigs_T * configs;
 int main(int argc, char *argv[])
 {
     initDaemon();
-
     waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);
     printf("Specified idle time (%lu ms) is reached.\n", configs->onIdleTimeout);
 
@@ -58,8 +58,21 @@ int main(int argc, char *argv[])
 
     waitXScreensaverUnblanked(&configs->onBlankedRefreshRate);
     puts("\n\nExiting XScreensaver");
-    kill(xscrPid, SIGKILL);
 
+    pid_t lockerPid = runScrLocker();
+    while(true) {
+        pid_t result = waitpid(lockerPid, NULL, WNOHANG);
+        if (result == 0) {
+            printf("scrlocker is alive\n");
+        } else {
+            printf("scrlocker is dead\n");
+            break;
+        }
+    }
+
+
+
+    kill(xscrPid, SIGKILL);
     XFree(info);
     XCloseDisplay(display);
     free(configs);
@@ -108,6 +121,18 @@ void waitIdle(unsigned long timeout, const timespec_t * refreshRate)
         XScreenSaverQueryInfo(display, DefaultRootWindow(display), info);
     } while(info->idle < timeout);
 }
+
+pid_t runScrLocker()
+{
+    pid_t cpid = fork();
+    if(cpid == FORK_SUCCESS) {
+        execl("/usr/bin/slimlock", "/usr/bin/slimlock", NULL);
+    } else if(cpid == FORK_ERR) 
+        abortem("fork");
+
+    return cpid;
+}
+
 
 void waitXScreensaverUnblanked(const timespec_t * refreshRate)
 {
