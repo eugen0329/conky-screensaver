@@ -30,7 +30,7 @@ typedef struct {
     timespec_t onBlankedRefreshRate;
     timespec_t onLockedRefreshRate;
     char display[BUF_SIZE];
-} daemonConfigs_T;
+} daemonConfigs_t;
 
 void initDaemon();
 pid_t startScreensaver();
@@ -44,7 +44,7 @@ pid_t appendBackground();
 
 
 
-const static daemonConfigs_T DEFAULTS = {
+const static daemonConfigs_t DEFAULTS = {
     .onIdleTimeout = MIN_TO_MSEC(1./60),
     .onIdleRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
     .onBlankedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
@@ -54,7 +54,7 @@ const static daemonConfigs_T DEFAULTS = {
 
 static XScreenSaverInfo *info;
 static Display *display;
-static daemonConfigs_T * configs;
+static daemonConfigs_t * configs;
 bool_t isTerminated = false;
 
 int main(int argc, char *argv[])
@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
     /*uint8_t waitStatus;*/
 
     initDaemon();
-    bgPid = appendBackground();
     puts("Daemon is ready");
 
     while(true) {
@@ -73,6 +72,7 @@ int main(int argc, char *argv[])
         waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);
         /*waitStatus = waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);*/
         /*if(waitStatus == EXIT_FAILURE) break;*/
+        bgPid = appendBackground();
         printf("Specified idle time (%lu ms) is reached.\n", configs->onIdleTimeout);
 
         xscrPid = startScreensaver();
@@ -83,12 +83,12 @@ int main(int argc, char *argv[])
 
         lockerPid = runScrLocker();
         waitUnlocked(lockerPid, &configs->onLockedRefreshRate);
+        kill(bgPid, SIGKILL);
     }
 
     puts("Release of resources");
     free(configs);
     kill(xscrPid, SIGKILL);
-    kill(bgPid, SIGKILL);
     XFree(info);
     XCloseDisplay(display);
 
@@ -121,7 +121,7 @@ pid_t appendBackground()
         window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_widget_realize(window);
         /*gtk_window_fullscreen((struct GtkWindow *)window);*/
-        gtk_window_fullscreen(window);
+        gtk_window_fullscreen((GtkWindow*) window);
         color.red = 0x0;
         color.green = 0x0;
         color.blue = 0x0;
@@ -148,8 +148,8 @@ void initDaemon()
 
     system("killall xscreensaver &>/dev/null");
 
-    configs = malloc(sizeof(daemonConfigs_T));
-    memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_T));
+    configs = malloc(sizeof(daemonConfigs_t));
+    memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_t));
 
     snprintf(setDispCmd, sizeof(setDispCmd),
             "export DISPLAY=%s", configs->display);
