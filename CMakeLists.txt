@@ -55,7 +55,9 @@ set(TARGET ${TARGET_NAME})
 set(SRC_DIR "src/")
 
 #set (CMAKE_C_FLAGS "-std=c99 -Wall -pedantic-errors -lXss -lX11")
-set (CMAKE_C_FLAGS "-std=c99 -Wall -lXss -lX11")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -lXss -lX11")
+set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
+
 
 file(GLOB_RECURSE SRC_NAMES ${SRC_DIR}*.c)
 add_executable(${TARGET} ${SRC_NAMES})
