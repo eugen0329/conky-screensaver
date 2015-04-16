@@ -62,11 +62,11 @@ void onBlanked();
 void onLocked();
 
 const static daemonConfigs_t DEFAULTS = {
-    .onIdleTimeout = MIN_TO_MSEC(1.5/60),
-    .onIdleRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
-    .onBlankedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
-    .onLockedIdleTimeout =  MIN_TO_MSEC(2./60),
-    .onLockedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
+    .onIdleTimeout = MIN2MSEC(1.5/60),
+    .onIdleRefreshRate = { .tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2) },
+    .onBlankedRefreshRate = { .tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2) },
+    .onLockedIdleTimeout =  MIN2MSEC(2./60),
+    .onLockedRefreshRate = { .tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2) },
     .display = "\":0.0\""
 };
 
@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
     initDaemon();
     xscrPid = startScreensaver();
     DPUTS("Daemon is ready");
+    abortWithNotif("asd");
 
     currState = onIdle;
     isActive = true;
@@ -155,7 +156,7 @@ pid_t appendBackground()
         gtk_widget_show(window);
         gtk_main();
     } else if(cpid == FORK_ERR)
-        abortem("fork");
+        abortWithNotif("fork");
 
     return cpid;
 }
@@ -177,10 +178,10 @@ void initDaemon()
     system(setDispCmd);
 
     if((display = XOpenDisplay(0)) == NULL)
-        abortem("XOpenDisplay");
+        abortWithNotif("XOpenDisplay");
     if((info = XScreenSaverAllocInfo()) == NULL) {
         XCloseDisplay(display);
-        abortem("XScreenSaverAllocInfo");
+        abortWithNotif("XScreenSaverAllocInfo");
     }
 }
 
@@ -190,9 +191,9 @@ pid_t startScreensaver()
 
     if(cpid == FORK_SUCCESS) {
         char * cargv[] = {"/usr/bin/xscreensaver", "-no-splash", NULL};
-        if(execvp(cargv[0], &cargv[0]) == RVAL_ERR) abortem("exec");
+        if(execvp(cargv[0], &cargv[0]) == RVAL_ERR) abortWithNotif("exec");
     } else if(cpid == FORK_ERR)
-        abortem("fork");
+        abortWithNotif("fork");
 
     return cpid;
 }
@@ -224,7 +225,7 @@ pid_t runScrLocker()
     if(cpid == FORK_SUCCESS) {
         execl("/usr/bin/slimlock", "/usr/bin/slimlock", NULL);
     } else if(cpid == FORK_ERR)
-        abortem("fork");
+        abortWithNotif("fork");
 
     return cpid;
 }
@@ -243,10 +244,10 @@ void waitXScreensaverUnblanked(const timespec_t * refreshRate)
     while(repeat) {
         nanosleep(refreshRate, NULL);
 
-        if ( (pipe = popen(cmd, "r")) == NULL) abortem("popen");
+        if ( (pipe = popen(cmd, "r")) == NULL) abortWithNotif("popen");
         system(cmd);
         fgets(cmdOutp, sizeof(cmdOutp), pipe);
-        if(CH_TO_INT(cmdOutp[0]) == true) repeat = false;
+        if(CH2INT(cmdOutp[0]) == true) repeat = false;
         pclose(pipe);
     }
 }
@@ -257,9 +258,9 @@ void xscreensaverCommand(char * cmd)
 
     pid_t cpid = fork();
     if(cpid == FORK_SUCCESS) {
-        if(execvp(cargv[0], &cargv[0]) == RVAL_ERR) abortem("exec");
+        if(execvp(cargv[0], &cargv[0]) == RVAL_ERR) abortWithNotif("exec");
     } else if(cpid == FORK_ERR)
-        abortem("fork");
+        abortWithNotif("fork");
 
     waitpid(cpid, NULL, 0);
 }
