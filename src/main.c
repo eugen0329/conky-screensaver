@@ -24,23 +24,31 @@
 #define RVAL_ERR  -1
 #define DAEMON_IS_TERMINATED 1
 
+
+#define FORCE_INLINE static inline __attribute__((always_inline))
+
+
 typedef struct {
     unsigned long onIdleTimeout;
     timespec_t onIdleRefreshRate;
     timespec_t onBlankedRefreshRate;
+    unsigned long onLockedIdleTimeout;
     timespec_t onLockedRefreshRate;
     char display[BUF_SIZE];
 } daemonConfigs_t;
 
+typedef enum { WSTILL_WAIT, WTIME_IS_OUT, WIS_UNLOCKED } waitRVal_t;
+
 void initDaemon();
 pid_t startScreensaver();
 void xscreensaverCommand(char * cmd);
-uint8_t waitIdle(unsigned long timeout, const timespec_t * refreshRate);
+uint8_t waitIdle(unsigned long timeout, const timespec_t * refreshRate, int opts);
 void waitXScreensaverUnblanked(const timespec_t * refreshRate);
 pid_t runScrLocker();
-void waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate);
+uint8_t waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate, unsigned long timeout);
 void termhdl(int);
 pid_t appendBackground();
+FORCE_INLINE bool_t idleTimeIsOut(unsigned long timeout);
 
 void (*currState)();
 void onIdle();
@@ -51,6 +59,7 @@ const static daemonConfigs_t DEFAULTS = {
     .onIdleTimeout = MIN_TO_MSEC(1./60),
     .onIdleRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
     .onBlankedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
+    .onLockedIdleTimeout =  MIN_TO_MSEC(1./60),
     .onLockedRefreshRate = { .tv_sec = 0, .tv_nsec = TO_NANO_SEC(0.2) },
     .display = "\":0.0\""
 };
@@ -88,7 +97,7 @@ int main(int argc, char *argv[])
 void onIdle()
 {
     puts("Start again");
-    waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate);
+    waitIdle(configs->onIdleTimeout, &configs->onIdleRefreshRate, 0);
     bgPid = appendBackground();
     printf("Specified idle time (%lu ms) is reached.\n", configs->onIdleTimeout);
     currState = &onBlanked;
@@ -105,25 +114,32 @@ void onBlanked()
 void onLocked()
 {
     pid_t lockerPid;
+    uint8_t waitResult;
     lockerPid = runScrLocker();
-    waitUnlocked(lockerPid, &configs->onLockedRefreshRate);
-    kill(bgPid, SIGKILL);
-    currState = onIdle;
+
+    waitResult = waitUnlocked(lockerPid, &configs->onLockedRefreshRate, configs->onLockedIdleTimeout);
+    if(waitResult == WIS_UNLOCKED) {
+        kill(bgPid, SIGKILL);
+        currState = onIdle;
+    } else {
+        kill(lockerPid, SIGKILL);
+        currState = onBlanked;
+    }
 }
 
-void waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate)
+uint8_t waitUnlocked(pid_t lockerPid, const timespec_t* refreshRate, unsigned long timeout)
 {
-    pid_t result;
+    /*pid_t result;*/
     while(true) {
         nanosleep(refreshRate, NULL);
-        result = waitpid(lockerPid, NULL, WNOHANG);
-        if (result == 0) {
-            printf("scrlocker is alive\n");
-        } else {
-            printf("scrlocker is dead\n");
-            break;
-        }
+        if(idleTimeIsOut(timeout)) return WTIME_IS_OUT;
+        if(waitpid(lockerPid, NULL, WNOHANG) != 0) return WIS_UNLOCKED;
+        /*result = waitpid(lockerPid, NULL, WNOHANG);*/
+        /*if (result == 0) {*/ /*printf("scrlocker is alive\n");*/
+        /*} else {*/ /*printf("scrlocker is dead\n");*/ /*return WIS_UNLOCKED;*/ /*}*/
     }
+
+    return 0;
 }
 
 pid_t appendBackground()
@@ -143,7 +159,7 @@ pid_t appendBackground()
         gtk_widget_modify_bg(window, GTK_STATE_NORMAL, &color);
         gtk_widget_show(window);
         gtk_main();
-    } else if(cpid == FORK_ERR) 
+    } else if(cpid == FORK_ERR)
         abortem("fork");
 
     return cpid;
@@ -197,16 +213,26 @@ pid_t startScreensaver()
     return cpid;
 }
 
-uint8_t waitIdle(unsigned long timeout, const timespec_t * refreshRate)
+uint8_t waitIdle(unsigned long timeout, const timespec_t * refreshRate, int opts)
 {
-    do {
-
-        if(isTerminated) return EXIT_FAILURE;
+    bool_t repeat = true;
+    if(opts & WNOHANG) {
+        repeat = false;
+    }
+    while(repeat) {
+        /*if(isTerminated) return EXIT_FAILURE;*/
+        if(idleTimeIsOut(timeout) == true) return WTIME_IS_OUT;
         nanosleep(refreshRate, NULL);
-        XScreenSaverQueryInfo(display, DefaultRootWindow(display), info);
-    } while(info->idle < timeout);
+    }
 
-    return EXIT_SUCCESS;
+    return WSTILL_WAIT;
+}
+
+FORCE_INLINE bool_t idleTimeIsOut(unsigned long timeout)
+{
+    XScreenSaverQueryInfo(display, DefaultRootWindow(display), info);
+    if(info->idle >= timeout) return true;
+    return false;
 }
 
 pid_t runScrLocker()
@@ -214,7 +240,7 @@ pid_t runScrLocker()
     pid_t cpid = fork();
     if(cpid == FORK_SUCCESS) {
         execl("/usr/bin/slimlock", "/usr/bin/slimlock", NULL);
-    } else if(cpid == FORK_ERR) 
+    } else if(cpid == FORK_ERR)
         abortem("fork");
 
     return cpid;
