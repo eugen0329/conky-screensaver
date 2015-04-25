@@ -1,5 +1,13 @@
 #include "helpers.h"
 
+
+uint8_t parseULong(const char * from, unsigned long* to)
+{
+    char * endptr;
+    *to = strtoul(from, &endptr, 10);
+    return *endptr == '\0' ? 0 : -1;
+}
+
 void abortem(const char * msg)
 {
     perror(msg);
@@ -18,4 +26,5 @@ void abortWithNotif(const char * msg)
 
     exit(EXIT_FAILURE);
 }
+
 

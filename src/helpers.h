@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h> /* uint8_t */
 #include <libnotify/notify.h>
 
 #define SEC2NANOSEC( x )  ( x * 1000000000 )
@@ -16,6 +17,8 @@ typedef enum { false = 0, true = 1} bool_t;
 
 void abortem(const char * msg);
 void abortWithNotif(const char * msg);
+
+uint8_t parseULong(const char * from, unsigned long* to);
 
 #endif /* end of include guard: HELPERS_H_EMYJVGR0 */
 
