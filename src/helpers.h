@@ -8,9 +8,18 @@
 #include <stdint.h> /* uint8_t */
 #include <libnotify/notify.h>
 
+#ifdef DEBUG /* define debug output functions */
+#   define DPUTS(str) puts(str);
+#   define DPRINTF(...) printf(__VA_ARGS__);
+#else /* just eat up the output functions if release */
+#   define DPRINTF(...)
+#   define DPUTS(str)
+#endif
+
 #define SEC2NANOSEC( x )  ( x * 1000000000 )
 #define MIN2MSEC( x )  ( x * 60 * 1000 )
 #define CH2INT( x )  ( x - '0' )
+
 
 typedef struct timespec timespec_t;
 typedef enum { false = 0, true = 1} bool_t;

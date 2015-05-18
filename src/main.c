@@ -20,7 +20,9 @@
 #include <libconfig.h>
 #include <gtk/gtk.h>
 
+
 #include "helpers.h"
+#include "inline.h"
 
 #define BUF_SIZE 256
 #define FORK_SUCCESS 0
@@ -28,19 +30,8 @@
 #define RVAL_ERR -1
 #define OPTS_END -1
 
-
 #define DEFAULT_CONFIG_PATH "/etc/conkyscreensaver.conf"
 #define USR_CONF_PATH_FORMAT "/home/%s/.conkyscreensaver.conf"
-
-#define FORCE_INLINE static inline __attribute__((always_inline))
-
-#ifdef DEBUG /* define debug output functions */
-#define DPUTS(str) puts(str);
-#define DPRINTF(...) printf(__VA_ARGS__);
-#else /* just eat up the output functions if release */
-#define DPRINTF(...)
-#define DPUTS(str)
-#endif
 
 const char WRONG_ARG_ERR[] = "Error while parsing the arguments";
 
@@ -93,13 +84,12 @@ static pid_t xscrPid;
 
 void parseArgs(int argc, char **argv);
 void parseConfFile();
+void tryReadConfFile(config_t* config, const char* confPath);
 
-void tryReadConfFile(config_t* config, const char* fname);
 
 int main(int argc, char *argv[])
 {
     initDaemon(argc, argv);
-        puts("2");
     xscrPid = startScreensaver();
     DPUTS("Daemon is ready");
 
@@ -151,16 +141,16 @@ void parseConfFile()
     config_init(&fconfigs);
     tryReadConfFile(&fconfigs, userConfPath);
 
-    printf("%s\n", userConfPath);
-
-
     exit(0);
 }
 
-void tryReadConfFile(config_t* config, const char* fname)
+void tryReadConfFile(config_t* config, const char* confPath)
 {
-    if(! config_read_file(config, fname)) {
-        exit(EXIT_FAILURE);
+    if(! config_read_file(config, confPath))
+    {
+      fprintf(stderr, "Conf error at %s, %d: %s\n",
+              config_error_file(config), config_error_line(config), config_error_text(config));
+      exit(EXIT_FAILURE);
     }
 }
 
