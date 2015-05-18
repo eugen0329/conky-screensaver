@@ -22,19 +22,26 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 if(NOT PKG_CONFIG_FOUND)
-    message(FATAL_ERROR "${BOLD_BLUE}Pkg-confing not found${RESET_COLOR}")
+    message(FATAL_ERROR "${BOLD_BLUE}Pkg-confing is not found${RESET_COLOR}")
 endif()
 
 
 pkg_check_modules(LIBNOTIFY libnotify)
 if(NOT LIBNOTIFY_FOUND)
-    message(STATUS "Libnotify not found")
+    message(STATUS "Libnotify is not found")
+    MATH(EXPR REQ_ERR_COUNTER ${ERR_COUNTER}+1)
+endif()
+
+
+pkg_check_modules(LIBCONFIG libconfig)
+if(NOT LIBCONFIG_FOUND)
+    message(STATUS "Libconfig is not found")
     MATH(EXPR REQ_ERR_COUNTER ${ERR_COUNTER}+1)
 endif()
 
 pkg_check_modules(GTK REQUIRED "gtk+-2.0")
 if(NOT GTK_FOUND)
-    message(STATUS "Gtk+ 2.0 not found")
+    message(STATUS "Gtk+ 2.0 is not found")
     MATH(EXPR REQ_ERR_COUNTER ${ERR_COUNTER}+1)
 endif()
 
@@ -70,11 +77,13 @@ include_directories(
     ${PROJECT_BINARY_DIR}
     ${SRC_DIR}
     ${GTK_INCLUDE_DIRS}
+    ${LIBCONFIG_INCLUDE_DIRS}
 )
 
 target_link_libraries(
     ${TARGET}
     ${LIBNOTIFY_LIBRARIES}
+    ${LIBCONFIG_LIBRARIES}
     ${GTK_LIBRARIES}
 )
 
