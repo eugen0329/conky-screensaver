@@ -8,6 +8,8 @@
 #include <stdint.h> /* uint8_t */
 #include <libnotify/notify.h>
 
+#include <time.h> /* uint8_t */
+
 #include "int_types.h"
 
 #ifdef DEBUG /* define debug output functions */
@@ -30,6 +32,8 @@ void abortem(const char * msg);
 void abortWithNotif(const char * msg);
 
 uint8_t parseULong(const char * from, U64* to);
+uint8_t parseLong(const char * from, long* to);
+uint8_t parseTimeT(const char * from, time_t* to);
 
 void free2(void** ptr, U64 size);
 

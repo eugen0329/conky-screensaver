@@ -158,6 +158,7 @@ void parseArgs(int argc, char **argv)
 {
     char opt;
     int optIndex = 0;
+    char** tokens;
 
     static struct option long_options[] = {
         {"help",                  no_argument,        0,  'h'},
@@ -182,8 +183,12 @@ void parseArgs(int argc, char **argv)
             if(parseULong(optarg, &configs->onLockedIdleTimeout)) abortWithNotif(WRONG_ARG_ERR);
             break;
         case 't':
+
             break;
         case 'r':
+            tokens = parseTokens(optarg, ",", NULL);
+            if(parseTimeT(tokens[0], &(configs->onIdleRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
+            if(parseLong(tokens[1], &(configs->onIdleRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
             break;
         case 'l':
             break;

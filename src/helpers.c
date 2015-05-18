@@ -1,7 +1,20 @@
 #include "helpers.h"
 
-
 uint8_t parseULong(const char * from, U64* to)
+{
+    char * endptr;
+    *to = strtoul(from, &endptr, 10);
+    return *endptr == '\0' ? 0 : -1;
+}
+
+uint8_t parseLong(const char * from, long* to)
+{
+    char * endptr;
+    *to = strtoul(from, &endptr, 10);
+    return *endptr == '\0' ? 0 : -1;
+}
+
+uint8_t parseTimeT(const char * from, time_t* to)
 {
     char * endptr;
     *to = strtoul(from, &endptr, 10);
