@@ -27,4 +27,13 @@ void abortWithNotif(const char * msg)
     exit(EXIT_FAILURE);
 }
 
+void free2(void** ptr, unsigned long size)
+{
+    unsigned long i;
+
+    for (i = 0; i < size; ++i) {
+        free(ptr[i]);
+    }
+    free(ptr);
+}
 

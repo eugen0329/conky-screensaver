@@ -29,5 +29,7 @@ void abortWithNotif(const char * msg);
 
 uint8_t parseULong(const char * from, unsigned long* to);
 
+void free2(void** ptr, unsigned long size);
+
 #endif /* end of include guard: HELPERS_H_EMYJVGR0 */
 
