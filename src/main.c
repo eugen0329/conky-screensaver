@@ -30,6 +30,8 @@
 #define RVAL_ERR -1
 #define OPTS_END -1
 
+#define FRACTIONAL_DIVIDER "."
+
 #define DEFAULT_CONFIG_PATH "/etc/conkyscreensaver.conf"
 #define USR_CONF_PATH_FORMAT "/home/%s/.conkyscreensaver.conf"
 
@@ -159,6 +161,7 @@ void parseArgs(int argc, char **argv)
     char opt;
     int optIndex = 0;
     char** tokens;
+    U64 tokensCount = 0;
 
     static struct option long_options[] = {
         {"help",                  no_argument,        0,  'h'},
@@ -183,16 +186,25 @@ void parseArgs(int argc, char **argv)
             if(parseULong(optarg, &configs->onLockedIdleTimeout)) abortWithNotif(WRONG_ARG_ERR);
             break;
         case 't':
-
+            printf("-t is not implemented yet\n");
             break;
         case 'r':
-            tokens = parseTokens(optarg, ",", NULL);
+            tokens = parseTokens(optarg, FRACTIONAL_DIVIDER, &tokensCount);
+            if(tokensCount != 2) abortWithNotif(WRONG_ARG_ERR);
             if(parseTimeT(tokens[0], &(configs->onIdleRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
             if(parseLong(tokens[1], &(configs->onIdleRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
             break;
         case 'l':
+            tokens = parseTokens(optarg, FRACTIONAL_DIVIDER, &tokensCount);
+            if(tokensCount != 2) abortWithNotif(WRONG_ARG_ERR);
+            if(parseTimeT(tokens[0], &(configs->onLockedRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
+            if(parseLong(tokens[1], &(configs->onLockedRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
             break;
         case 'b':
+            tokens = parseTokens(optarg, FRACTIONAL_DIVIDER, &tokensCount);
+            if(tokensCount != 2) abortWithNotif(WRONG_ARG_ERR);
+            if(parseTimeT(tokens[0], &(configs->onBlankedRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
+            if(parseLong(tokens[1], &(configs->onBlankedRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
             break;
         case 'h':
             showUsage();
