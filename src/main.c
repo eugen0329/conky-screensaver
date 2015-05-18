@@ -23,6 +23,7 @@
 
 #include "helpers.h"
 #include "inline.h"
+#include "parse_helpers.h"
 
 #define BUF_SIZE 256
 #define FORK_SUCCESS 0
