@@ -5,7 +5,6 @@
 
 #include <regex.h>
 #include <limits.h>
-#include <stdint.h> /* uint8_t */
 #include <time.h>   /* usleep */
 
 #include <unistd.h>
@@ -20,10 +19,10 @@
 #include <libconfig.h>
 #include <gtk/gtk.h>
 
-
 #include "helpers.h"
 #include "inline.h"
 #include "parse_helpers.h"
+#include "int_types.h"
 
 #define BUF_SIZE 256
 #define FORK_SUCCESS 0
@@ -38,10 +37,10 @@ const char WRONG_ARG_ERR[] = "Error while parsing the arguments";
 
 typedef enum { WSTILL_WAIT, WTIME_IS_OUT, WIS_UNLOCKED } waitRVal_t;
 typedef struct {
-    unsigned long onIdleTimeout;
+    U64 onIdleTimeout;
     timespec_t onIdleRefreshRate;
 
-    unsigned long onLockedIdleTimeout;
+    U64 onLockedIdleTimeout;
     timespec_t onLockedRefreshRate;
 
     timespec_t onBlankedRefreshRate;
@@ -51,16 +50,16 @@ typedef struct {
 void initDaemon(int argc, char *argv[]);
 pid_t startScreensaver();
 void xscreensaverCommand(char *cmd);
-uint8_t waitIdle(unsigned long timeout, const timespec_t *refreshRate,
+uint8_t waitIdle(U64 timeout, const timespec_t *refreshRate,
                  int opts);
 void waitXScreensaverUnblanked(const timespec_t *refreshRate);
 pid_t runScrLocker();
 uint8_t waitUnlocked(pid_t lockerPid, const timespec_t *refreshRate,
-                     unsigned long timeout);
+                     U64 timeout);
 void termhdl(int);
 
 pid_t appendBackground();
-FORCE_INLINE bool_t idleTimeIsOut(unsigned long timeout);
+FORCE_INLINE bool_t idleTimeIsOut(U64 timeout);
 void showUsage();
 
 void (*currState)();
@@ -234,7 +233,7 @@ void onLocked()
 }
 
 uint8_t waitUnlocked(pid_t lockerPid, const timespec_t *refreshRate,
-                     unsigned long timeout)
+                     U64 timeout)
 {
     while (true) {
         nanosleep(refreshRate, NULL);
@@ -286,7 +285,7 @@ pid_t startScreensaver()
     return cpid;
 }
 
-uint8_t waitIdle(unsigned long timeout, const timespec_t *refreshRate, int opts)
+uint8_t waitIdle(U64 timeout, const timespec_t *refreshRate, int opts)
 {
     bool_t repeat = true;
 
@@ -302,7 +301,7 @@ uint8_t waitIdle(unsigned long timeout, const timespec_t *refreshRate, int opts)
     return WSTILL_WAIT;
 }
 
-FORCE_INLINE bool_t idleTimeIsOut(unsigned long timeout)
+FORCE_INLINE bool_t idleTimeIsOut(U64 timeout)
 {
     XScreenSaverQueryInfo(display, DefaultRootWindow(display), info);
     return info->idle >= timeout ? true : false;

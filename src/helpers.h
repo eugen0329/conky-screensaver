@@ -8,6 +8,8 @@
 #include <stdint.h> /* uint8_t */
 #include <libnotify/notify.h>
 
+#include "int_types.h"
+
 #ifdef DEBUG /* define debug output functions */
 #   define DPUTS(str) puts(str);
 #   define DPRINTF(...) printf(__VA_ARGS__);
@@ -27,9 +29,9 @@ typedef enum { false = 0, true = 1} bool_t;
 void abortem(const char * msg);
 void abortWithNotif(const char * msg);
 
-uint8_t parseULong(const char * from, unsigned long* to);
+uint8_t parseULong(const char * from, U64* to);
 
-void free2(void** ptr, unsigned long size);
+void free2(void** ptr, U64 size);
 
 #endif /* end of include guard: HELPERS_H_EMYJVGR0 */
 

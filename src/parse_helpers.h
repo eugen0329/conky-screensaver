@@ -5,11 +5,10 @@
 #include <stdlib.h>
 #include "inline.h"
 
-
-FORCE_INLINE unsigned long getTokensCount(const char* str, const char* separators)
+FORCE_INLINE U64 getTokensCount(const char* str, const char* separators)
 {
-    unsigned long len = strlen(str), nSeparators = strlen(separators);
-    unsigned long i, j, count = 0;
+    U64 len = strlen(str), nSeparators = strlen(separators);
+    U64 i, j, count = 0;
 
     for (i = 0; i < len; ++i) {
         for (j = 0; j < nSeparators; ++j) {
@@ -22,8 +21,7 @@ FORCE_INLINE unsigned long getTokensCount(const char* str, const char* separator
     return count + 1;
 }
 
-
-char** parseTokens(const char* str, const char* separators, unsigned long* count)
+char** parseTokens(const char* str, const char* separators, U64* count)
 {
     char* strDup = (char *) calloc(strlen(str) + 1, sizeof(char));
     const char* token;
@@ -44,6 +42,5 @@ char** parseTokens(const char* str, const char* separators, unsigned long* count
 
     return tokens;
 }
-
 
 #endif /* end of include guard: PARSE_HELPERS_H_RVS6KFP9 */

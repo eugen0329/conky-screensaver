@@ -1,7 +1,7 @@
 #include "helpers.h"
 
 
-uint8_t parseULong(const char * from, unsigned long* to)
+uint8_t parseULong(const char * from, U64* to)
 {
     char * endptr;
     *to = strtoul(from, &endptr, 10);
@@ -27,9 +27,9 @@ void abortWithNotif(const char * msg)
     exit(EXIT_FAILURE);
 }
 
-void free2(void** ptr, unsigned long size)
+void free2(void** ptr, U64 size)
 {
-    unsigned long i;
+    U64 i;
 
     for (i = 0; i < size; ++i) {
         free(ptr[i]);
