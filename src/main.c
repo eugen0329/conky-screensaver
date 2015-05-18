@@ -17,6 +17,7 @@
 #include <ctype.h>
 
 #include <X11/extensions/scrnsaver.h>
+#include <libconfig.h>
 #include <gtk/gtk.h>
 
 #include "helpers.h"
@@ -26,6 +27,10 @@
 #define FORK_ERR -1
 #define RVAL_ERR -1
 #define OPTS_END -1
+
+
+#define DEFAULT_CONFIG_PATH "/etc/conkyscreensaver.conf"
+#define USR_CONF_PATH_FORMAT "/home/%s/.conkyscreensaver.conf"
 
 #define FORCE_INLINE static inline __attribute__((always_inline))
 
@@ -61,6 +66,7 @@ pid_t runScrLocker();
 uint8_t waitUnlocked(pid_t lockerPid, const timespec_t *refreshRate,
                      unsigned long timeout);
 void termhdl(int);
+
 pid_t appendBackground();
 FORCE_INLINE bool_t idleTimeIsOut(unsigned long timeout);
 void showUsage();
@@ -86,6 +92,9 @@ static pid_t bgPid;
 static pid_t xscrPid;
 
 void parseArgs(int argc, char **argv);
+void parseConfFile();
+
+void tryReadConfFile(config_t* config, const char* fname);
 
 int main(int argc, char *argv[])
 {
@@ -112,10 +121,11 @@ void initDaemon(int argc, char *argv[])
 {
     char setDispCmd[BUF_SIZE];
 
-
     system("killall xscreensaver &>/dev/null");
     configs = malloc(sizeof(daemonConfigs_t));
     memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_t));
+
+    parseConfFile();
     parseArgs(argc, argv);
     snprintf(setDispCmd, sizeof(setDispCmd), "export DISPLAY=%s",
              configs->display);
@@ -126,6 +136,31 @@ void initDaemon(int argc, char *argv[])
     if ((info = XScreenSaverAllocInfo()) == NULL) {
         XCloseDisplay(display);
         abortWithNotif("XScreenSaverAllocInfo");
+    }
+}
+
+void parseConfFile()
+{
+    config_t fconfigs;
+
+    char* username = getenv("USER");
+    int pathLen = strlen(username) + (strlen(USR_CONF_PATH_FORMAT) - strlen("%s")) + 1;
+    char* userConfPath = (char *) malloc(pathLen * sizeof(char));
+    snprintf(userConfPath, pathLen, USR_CONF_PATH_FORMAT, username);
+
+    config_init(&fconfigs);
+    tryReadConfFile(&fconfigs, userConfPath);
+
+    printf("%s\n", userConfPath);
+
+
+    exit(0);
+}
+
+void tryReadConfFile(config_t* config, const char* fname)
+{
+    if(! config_read_file(config, fname)) {
+        exit(EXIT_FAILURE);
     }
 }
 
