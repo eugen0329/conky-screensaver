@@ -58,3 +58,8 @@ char* getUserConfPath()
     snprintf(userConfPath, pathLen, USR_CONF_PATH_FORMAT, username);
     return userConfPath;
 }
+
+void showUsage()
+{
+    printf("USAGE: \n");
+}

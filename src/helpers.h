@@ -9,6 +9,7 @@
 #include <libnotify/notify.h>
 
 #include <time.h> /* uint8_t */
+/* #include <sys/time.h> */
 
 #include "int_types.h"
 
@@ -20,14 +21,20 @@
 #   define DPUTS(str)
 #endif
 
+#define FORK_SUCCESS 0
+#define FORK_ERR -1
+#define RVAL_ERR -1
+#define OPTS_END -1
+
 #define SEC2NANOSEC( x )  ( x * 1000000000 )
 #define MIN2MSEC( x )  ( x * 60 * 1000 )
 #define CH2INT( x )  ( x - '0' )
 
 #define USR_CONF_PATH_FORMAT "/home/%s/.conkyscreensaver.cfg"
 
-typedef struct timespec timespec_t;
 typedef enum { false = 0, true = 1} bool_t;
+
+typedef struct timespec timespec_t;
 
 void abortem(const char * msg);
 void abortWithNotif(const char * msg);
@@ -40,6 +47,8 @@ void free2(void** ptr, U64 size);
 
 
 char* getUserConfPath();
+
+void showUsage();
 
 #endif /* end of include guard: HELPERS_H_EMYJVGR0 */
 
