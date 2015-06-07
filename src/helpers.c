@@ -50,3 +50,11 @@ void free2(void** ptr, U64 size)
     free(ptr);
 }
 
+char* getUserConfPath()
+{
+    char* username = getenv("USER");
+    int pathLen = strlen(username) + (strlen(USR_CONF_PATH_FORMAT) - strlen("%s")) + 1;
+    char* userConfPath = (char *) malloc(pathLen * sizeof(char));
+    snprintf(userConfPath, pathLen, USR_CONF_PATH_FORMAT, username);
+    return userConfPath;
+}

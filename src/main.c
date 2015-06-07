@@ -32,9 +32,6 @@
 
 #define FRACTIONAL_DIVIDER "."
 
-#define DEFAULT_CONFIG_PATH "/etc/conkyscreensaver.conf"
-#define USR_CONF_PATH_FORMAT "/home/%s/.conkyscreensaver.conf"
-
 const char WRONG_ARG_ERR[] = "Error while parsing the arguments";
 
 typedef enum { WSTILL_WAIT, WTIME_IS_OUT, WIS_UNLOCKED } waitRVal_t;
@@ -130,7 +127,7 @@ void initDaemon(int argc, char *argv[])
     /* memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_t)); */
 
     parseCmdLineArgs(argc, argv);
-    /* parseConfFile(); */
+    parseConfFile();
     setDefaultConfigs();
 
 
@@ -168,25 +165,50 @@ void setDefaultConfigs()
 
 void parseConfFile()
 {
-    return ;
     config_t config;
+    char* userConfPath = getUserConfPath();
+    char** tokens;
+    U64 tokensCount = 0;
 
-    char* username = getenv("USER");
-    int pathLen = strlen(username) + (strlen(USR_CONF_PATH_FORMAT) - strlen("%s")) + 1;
-    char* userConfPath = (char *) malloc(pathLen * sizeof(char));
-    snprintf(userConfPath, pathLen, USR_CONF_PATH_FORMAT, username);
+    const char* strBuf;
+    double floatBuf;
 
     config_init(&config);
     tryReadConfFile(&config, userConfPath);
 
-    /* config_lookup_string(config, ); */
+    if(config_lookup_float(&config, "onIdleTimeout", &floatBuf)) {
+        DPRINTF( "conf file: parsed onIdleTimeout == %f", floatBuf )
+        configs->onIdleTimeout = floatBuf;
+    }
+    if(config_lookup_float(&config, "onLockedIdleTimeout", &floatBuf)) {
+        DPRINTF( "conf file: parsed onLockedIdleTimeout == %f", floatBuf )
+        configs->onLockedIdleTimeout = floatBuf;
+    }
+    if(config_lookup_string(&config, "onIdleRefreshRate", &strBuf)) {
+        tokens = parseTokens(strBuf, FRACTIONAL_DIVIDER, &tokensCount);
+        configs->onLockedIdleTimeout = floatBuf;
+        if(parseTimeT(tokens[0], &(configs->onIdleRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
+        if(parseLong(tokens[1], &(configs->onIdleRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
+    }
+    if(config_lookup_string(&config, "onLockedRefreshRate", &strBuf)) {
+        tokens = parseTokens(optarg, FRACTIONAL_DIVIDER, &tokensCount);
+        if(tokensCount != 2) abortWithNotif(WRONG_ARG_ERR);
+        if(parseTimeT(tokens[0], &(configs->onLockedRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
+        if(parseLong(tokens[1], &(configs->onLockedRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
+    }
+
+    if(config_lookup_string(&config, "onBlankedRefreshRate", &strBuf)) {
+        tokens = parseTokens(optarg, FRACTIONAL_DIVIDER, &tokensCount);
+        if(tokensCount != 2) abortWithNotif(WRONG_ARG_ERR);
+        if(parseTimeT(tokens[0], &(configs->onBlankedRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
+        if(parseLong(tokens[1], &(configs->onBlankedRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
+    }
 
 }
 
 void tryReadConfFile(config_t* config, const char* confPath)
 {
-    if(! config_read_file(config, confPath))
-    {
+    if(! config_read_file(config, confPath)) {
       fprintf(stderr, "Conf error at %s, %d: %s\n",
               config_error_file(config), config_error_line(config), config_error_text(config));
       exit(EXIT_FAILURE);

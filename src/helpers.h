@@ -24,6 +24,7 @@
 #define MIN2MSEC( x )  ( x * 60 * 1000 )
 #define CH2INT( x )  ( x - '0' )
 
+#define USR_CONF_PATH_FORMAT "/home/%s/.conkyscreensaver.cfg"
 
 typedef struct timespec timespec_t;
 typedef enum { false = 0, true = 1} bool_t;
@@ -36,6 +37,9 @@ uint8_t parseLong(const char * from, long* to);
 uint8_t parseTimeT(const char * from, time_t* to);
 
 void free2(void** ptr, U64 size);
+
+
+char* getUserConfPath();
 
 #endif /* end of include guard: HELPERS_H_EMYJVGR0 */
 
