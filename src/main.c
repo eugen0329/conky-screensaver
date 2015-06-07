@@ -38,16 +38,25 @@
 const char WRONG_ARG_ERR[] = "Error while parsing the arguments";
 
 typedef enum { WSTILL_WAIT, WTIME_IS_OUT, WIS_UNLOCKED } waitRVal_t;
+
+typedef U64 onIdleTimeout_t;
+typedef timespec_t onIdleRefreshRate_t;
+typedef U64 onLockedTimeout_t;
+typedef timespec_t onLockedRefreshRate_t;
+typedef timespec_t onBlankedRefreshRate_t;
+
 typedef struct {
-    U64 onIdleTimeout;
-    timespec_t onIdleRefreshRate;
+    onIdleTimeout_t        onIdleTimeout;
+    onIdleRefreshRate_t    onIdleRefreshRate;
 
-    U64 onLockedIdleTimeout;
-    timespec_t onLockedRefreshRate;
+    onLockedTimeout_t      onLockedIdleTimeout;
+    onLockedRefreshRate_t  onLockedRefreshRate;
 
-    timespec_t onBlankedRefreshRate;
-    char display[BUF_SIZE];
+    onBlankedRefreshRate_t onBlankedRefreshRate;
+    char                   display[BUF_SIZE];
 } daemonConfigs_t;
+
+static const timespec_t NULL_TIMESPEC;
 
 void initDaemon(int argc, char *argv[]);
 pid_t startScreensaver();
@@ -72,7 +81,7 @@ void onLocked();
 const static daemonConfigs_t DEFAULTS = {
     .onIdleTimeout = MIN2MSEC(1.5 / 60),
     .onLockedIdleTimeout = MIN2MSEC(2. / 60),
-    .onIdleRefreshRate = {.tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2)},
+    .onIdleRefreshRate = {.tv_sec = 1, .tv_nsec = SEC2NANOSEC(0.2)},
     .onBlankedRefreshRate = {.tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2)},
     .onLockedRefreshRate = {.tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2)},
     .display = "\":0.0\""};
@@ -84,9 +93,12 @@ bool_t isActive;
 static pid_t bgPid;
 static pid_t xscrPid;
 
-void parseArgs(int argc, char **argv);
+void parseCmdLineArgs(int argc, char **argv);
 void parseConfFile();
 void tryReadConfFile(config_t* config, const char* confPath);
+
+
+void setDefaultConfigs();
 
 
 int main(int argc, char *argv[])
@@ -114,13 +126,17 @@ void initDaemon(int argc, char *argv[])
     char setDispCmd[BUF_SIZE];
 
     system("killall xscreensaver &>/dev/null");
-    configs = malloc(sizeof(daemonConfigs_t));
-    memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_t));
+    configs = calloc(0, sizeof(daemonConfigs_t));
+    /* memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_t)); */
 
-    parseConfFile();
-    parseArgs(argc, argv);
-    snprintf(setDispCmd, sizeof(setDispCmd), "export DISPLAY=%s",
-             configs->display);
+    parseCmdLineArgs(argc, argv);
+    /* parseConfFile(); */
+    setDefaultConfigs();
+
+
+
+
+    snprintf(setDispCmd, sizeof(setDispCmd), "export DISPLAY=%s", configs->display);
     system(setDispCmd);
 
     if ((display = XOpenDisplay(0)) == NULL)
@@ -131,19 +147,40 @@ void initDaemon(int argc, char *argv[])
     }
 }
 
+void setDefaultConfigs()
+{
+    if(configs->onIdleTimeout == (onIdleTimeout_t) 0) {
+        configs->onIdleTimeout = DEFAULTS.onIdleTimeout;
+    }
+    if(configs->onLockedIdleTimeout == (onLockedTimeout_t) 0) {
+        configs->onLockedIdleTimeout = DEFAULTS.onLockedIdleTimeout;
+    }
+    if( memcmp(&configs->onIdleRefreshRate, &NULL_TIMESPEC, sizeof(timespec_t)) == 0 ) {
+        configs->onIdleRefreshRate = DEFAULTS.onIdleRefreshRate;
+    }
+    if( memcmp(&configs->onBlankedRefreshRate, &NULL_TIMESPEC, sizeof(timespec_t)) == 0 ) {
+        configs->onBlankedRefreshRate = DEFAULTS.onBlankedRefreshRate;
+    }
+    if( memcmp(&configs->onLockedRefreshRate, &NULL_TIMESPEC, sizeof(timespec_t)) == 0 ) {
+        configs->onLockedRefreshRate = DEFAULTS.onLockedRefreshRate;
+    }
+}
+
 void parseConfFile()
 {
-    config_t fconfigs;
+    return ;
+    config_t config;
 
     char* username = getenv("USER");
     int pathLen = strlen(username) + (strlen(USR_CONF_PATH_FORMAT) - strlen("%s")) + 1;
     char* userConfPath = (char *) malloc(pathLen * sizeof(char));
     snprintf(userConfPath, pathLen, USR_CONF_PATH_FORMAT, username);
 
-    config_init(&fconfigs);
-    tryReadConfFile(&fconfigs, userConfPath);
+    config_init(&config);
+    tryReadConfFile(&config, userConfPath);
 
-    exit(0);
+    /* config_lookup_string(config, ); */
+
 }
 
 void tryReadConfFile(config_t* config, const char* confPath)
@@ -156,7 +193,7 @@ void tryReadConfFile(config_t* config, const char* confPath)
     }
 }
 
-void parseArgs(int argc, char **argv)
+void parseCmdLineArgs(int argc, char **argv)
 {
     char opt;
     int optIndex = 0;
@@ -352,7 +389,6 @@ void waitXScreensaverUnblanked(const timespec_t *refreshRate)
 
         if ((pipe = popen(cmd, "r")) == NULL)
             abortWithNotif("popen");
-        system(cmd);
         fgets(cmdOutp, sizeof(cmdOutp), pipe);
         if (CH2INT(cmdOutp[0]) == true)
             repeat = false;
