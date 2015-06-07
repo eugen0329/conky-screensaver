@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.8)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules" ${CMAKE_MODULE_PATH})
 
-project(conky_screensaver)
+project(conky-screensaver)
 
 if(NOT WIN32)
     string(ASCII 27 Esc)
