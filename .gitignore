@@ -5,6 +5,7 @@
 *.swo
 
 bin
+conky_screensaver
 
 CMakeFiles/*
 Makefile

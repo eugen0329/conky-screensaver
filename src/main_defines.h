@@ -59,19 +59,4 @@ const daemonConfigs_t DEFAULTS = {
     .display = "\":0.0\""};
 
 
-void initDaemon(int argc, char *argv[]);
-pid_t startScreensaver();
-void xscreensaverCommand(char *cmd);
-uint8_t waitIdle(U64 timeout, const timespec_t *refreshRate, int opts);
-void waitXScreensaverUnblanked(const timespec_t *refreshRate);
-pid_t runScrLocker();
-uint8_t waitUnlocked(pid_t lockerPid, const timespec_t *refreshRate, U64 timeout);
-pid_t appendBackground();
-FORCE_INLINE bool_t idleTimeIsOut(U64 timeout);
-
-void (*currState)();
-void onIdle();
-void onBlanked();
-void onLocked();
-
 #endif /* end of include guard: MAIN_DEFINES_H_AYRHVXKS */

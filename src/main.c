@@ -20,6 +20,23 @@ bool_t isActive;
 static pid_t bgPid;
 static pid_t xscrPid;
 
+
+void initDaemon(int argc, char *argv[]);
+pid_t startScreensaver();
+void xscreensaverCommand(char *cmd);
+uint8_t waitIdle(U64 timeout, const timespec_t *refreshRate, int opts);
+void waitXScreensaverUnblanked(const timespec_t *refreshRate);
+pid_t runScrLocker();
+uint8_t waitUnlocked(pid_t lockerPid, const timespec_t *refreshRate, U64 timeout);
+pid_t appendBackground();
+FORCE_INLINE bool_t idleTimeIsOut(U64 timeout);
+
+void (*currState)();
+void onIdle();
+void onBlanked();
+void onLocked();
+
+
 int main(int argc, char *argv[])
 {
     initDaemon(argc, argv);

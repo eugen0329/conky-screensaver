@@ -57,7 +57,7 @@ endif()
 #       General
 ######################
 
-set(TARGET_NAME "bin")
+set(TARGET_NAME "${PROJECT_NAME}")
 set(TARGET ${TARGET_NAME})
 set(SRC_DIR "src/")
 
