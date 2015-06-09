@@ -26,6 +26,8 @@
 #define RVAL_ERR -1
 #define OPTS_END -1
 
+#define SIZE( a ) ( (sizeof(a))/(sizeof(*a)) )
+
 #define SEC2NANOSEC( x )  ( x * 1000000000 )
 #define MIN2MSEC( x )  ( x * 60 * 1000 )
 #define CH2INT( x )  ( x - '0' )
@@ -47,8 +49,6 @@ void free2(void** ptr, U64 size);
 
 
 char* getUserConfPath();
-
-void showUsage();
 
 #endif /* end of include guard: HELPERS_H_EMYJVGR0 */
 

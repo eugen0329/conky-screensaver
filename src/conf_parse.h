@@ -32,19 +32,9 @@ void parseCmdLineArgs(int argc, char **argv, daemonConfigs_t* conf)
     char** tokens;
     U64 tokensCount = 0;
 
-    static struct option long_options[] = {
-        {"help",                  no_argument,        0,  'h'},
-        {"idle-timeout",          required_argument,  0,  'i'},
-        {"locked-idle-timeout",   required_argument,  0,  'c'},
-        {"locked-timeout",        required_argument,  0,  't'},
-        {"idle-refresh-rate",     required_argument,  0,  'r'},
-        {"locked-refresh-rate",   required_argument,  0,  'l'},
-        {"blanked-refresh-rate",  required_argument,  0,  'b'},
-        {0, 0, 0, 0}};
-
     DPUTS("starting to parse args");
     while (true) {
-        opt = getopt_long(argc, argv, "i:c:t:r:l:b:h", long_options, &optIndex);
+        opt = getopt_long(argc, argv, "i:c:t:r:l:b:h", cmdline_options, &optIndex);
         if (opt == -1) break;
 
         switch (opt) {

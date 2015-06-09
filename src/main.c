@@ -21,7 +21,6 @@ bool_t isActive;
 static pid_t bgPid;
 static pid_t xscrPid;
 
-
 void initDaemon(int argc, char *argv[]);
 pid_t startScreensaver();
 void xscreensaverCommand(char *cmd);
@@ -36,7 +35,6 @@ void (*currState)();
 void onIdle();
 void onBlanked();
 void onLocked();
-
 
 int main(int argc, char *argv[])
 {
@@ -232,5 +230,15 @@ void xscreensaverCommand(char *cmd)
         abortWithNotif("fork");
 
     waitpid(cpid, NULL, 0);
+}
+
+void showUsage()
+{
+    int i;
+    puts("USAGE:");
+    for (i = 0; i < SIZE(cmdline_options) - 1; ++i) {
+        printf(" -%c  --%s \n", cmdline_options[i].val, cmdline_options[i].name);
+    }
+    exit(EXIT_FAILURE);
 }
 
