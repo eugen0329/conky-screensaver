@@ -12,6 +12,7 @@
 #include "parse_helpers.h"
 #include "int_types.h"
 #include "conf_parse.h"
+#include "default_configs.h"
 
 static XScreenSaverInfo *info;
 static Display *display;
@@ -62,12 +63,14 @@ void initDaemon(int argc, char *argv[])
     char setDispCmd[BUF_SIZE];
 
     system("killall xscreensaver &>/dev/null");
-    configs = calloc(0, sizeof(daemonConfigs_t));
-    /* memcpy(configs, &DEFAULTS, sizeof(daemonConfigs_t)); */
+    configs = malloc(sizeof(daemonConfigs_t));
+    memset(configs, 0, sizeof(daemonConfigs_t));
 
     parseCmdLineArgs(argc, argv, configs);
     parseConfFile(configs);
+    printf("%f\n", (double)configs->onLockedIdleTimeout);
     setDefaultConfigs(configs);
+    printf("%f\n", (double)configs->onLockedIdleTimeout);
 
     snprintf(setDispCmd, sizeof(setDispCmd), "export DISPLAY=%s", configs->display);
     system(setDispCmd);
@@ -103,8 +106,7 @@ void onLocked()
     uint8_t waitResult;
     pid_t lockerPid = runScrLocker();
 
-    waitResult = waitUnlocked(lockerPid, &configs->onLockedRefreshRate,
-                              configs->onLockedIdleTimeout);
+    waitResult = waitUnlocked(lockerPid, &configs->onLockedRefreshRate, configs->onLockedIdleTimeout);
     if (waitResult == WIS_UNLOCKED) {
         kill(bgPid, SIGKILL);
         currState = onIdle;
@@ -114,8 +116,7 @@ void onLocked()
     }
 }
 
-uint8_t waitUnlocked(pid_t lockerPid, const timespec_t *refreshRate,
-                     U64 timeout)
+uint8_t waitUnlocked(pid_t lockerPid, const timespec_t *refreshRate, U64 timeout)
 {
     while (true) {
         nanosleep(refreshRate, NULL);

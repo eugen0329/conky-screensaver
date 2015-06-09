@@ -11,6 +11,8 @@
 #include "helpers.h"
 #include "parse_helpers.h"
 
+#include "default_configs.h"
+
 #define FRACTIONAL_DIVIDER "."
 
 void tryReadConfFile(config_t* config, const char* confPath)
@@ -88,6 +90,7 @@ void parseConfFile(daemonConfigs_t* conf)
     char* userConfPath = getUserConfPath();
     char** tokens;
     U64 tokensCount = 0;
+    int optionExist = 1;
 
     const char* strBuf;
     double floatBuf;
@@ -95,28 +98,34 @@ void parseConfFile(daemonConfigs_t* conf)
     config_init(&config);
     tryReadConfFile(&config, userConfPath);
 
-    if(config_lookup_float(&config, "onIdleTimeout", &floatBuf)) {
-        DPRINTF( "conf file: parsed onIdleTimeout == %f", floatBuf )
+    optionExist = config_lookup_float(&config, "onIdleTimeout", &floatBuf);
+    if(optionExist && conf->onIdleTimeout == 0) {
         conf->onIdleTimeout = floatBuf;
     }
-    if(config_lookup_float(&config, "onLockedIdleTimeout", &floatBuf)) {
-        DPRINTF( "conf file: parsed onLockedIdleTimeout == %f", floatBuf )
+
+    optionExist = config_lookup_float(&config, "onLockedIdleTimeout", &floatBuf);
+    if(optionExist && conf->onLockedIdleTimeout ==  0) {
+        DPRINTF( "conf file: parsed onLockedIdleTimeout == %f", floatBuf );
         conf->onLockedIdleTimeout = floatBuf;
     }
-    if(config_lookup_string(&config, "onIdleRefreshRate", &strBuf)) {
+
+    optionExist = config_lookup_string(&config, "onIdleRefreshRate", &strBuf);
+    if(optionExist && memcmp(&conf->onIdleRefreshRate, &NULL_TIMESPEC, sizeof(timespec_t)) == 0 ) {
         tokens = parseTokens(strBuf, FRACTIONAL_DIVIDER, &tokensCount);
-        conf->onLockedIdleTimeout = floatBuf;
         if(parseTimeT(tokens[0], &(conf->onIdleRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
         if(parseLong(tokens[1], &(conf->onIdleRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
     }
-    if(config_lookup_string(&config, "onLockedRefreshRate", &strBuf)) {
+
+    optionExist = config_lookup_string(&config, "onLockedRefreshRate", &strBuf);
+    if(optionExist && memcmp(&conf->onBlankedRefreshRate, &NULL_TIMESPEC, sizeof(timespec_t)) == 0 ) {
         tokens = parseTokens(optarg, FRACTIONAL_DIVIDER, &tokensCount);
         if(tokensCount != 2) abortWithNotif(WRONG_ARG_ERR);
         if(parseTimeT(tokens[0], &(conf->onLockedRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
         if(parseLong(tokens[1], &(conf->onLockedRefreshRate).tv_nsec)) abortWithNotif(WRONG_ARG_ERR);
     }
 
-    if(config_lookup_string(&config, "onBlankedRefreshRate", &strBuf)) {
+    optionExist = config_lookup_string(&config, "onBlankedRefreshRate", &strBuf);
+    if(optionExist && memcmp(&conf->onLockedRefreshRate, &NULL_TIMESPEC, sizeof(timespec_t)) == 0 ) {
         tokens = parseTokens(optarg, FRACTIONAL_DIVIDER, &tokensCount);
         if(tokensCount != 2) abortWithNotif(WRONG_ARG_ERR);
         if(parseTimeT(tokens[0], &(conf->onBlankedRefreshRate).tv_sec)) abortWithNotif(WRONG_ARG_ERR);
@@ -127,10 +136,10 @@ void parseConfFile(daemonConfigs_t* conf)
 
 void setDefaultConfigs(daemonConfigs_t* conf)
 {
-    if(conf->onIdleTimeout == (onIdleTimeout_t) 0) {
+    if(conf->onIdleTimeout == 0) {
         conf->onIdleTimeout = DEFAULTS.onIdleTimeout;
     }
-    if(conf->onLockedIdleTimeout == (onLockedTimeout_t) 0) {
+    if(conf->onLockedIdleTimeout ==  0) {
         conf->onLockedIdleTimeout = DEFAULTS.onLockedIdleTimeout;
     }
     if( memcmp(&conf->onIdleRefreshRate, &NULL_TIMESPEC, sizeof(timespec_t)) == 0 ) {

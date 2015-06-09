@@ -5,7 +5,7 @@
 
 const daemonConfigs_t DEFAULTS = {
     .onIdleTimeout = MIN2MSEC(20.5 / 60),
-    .onLockedIdleTimeout = MIN2MSEC(5. / 60),
+    .onLockedIdleTimeout = MIN2MSEC(2. / 60),
     .onIdleRefreshRate = {.tv_sec = 1, .tv_nsec = SEC2NANOSEC(0.2)},
     .onBlankedRefreshRate = {.tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2)},
     .onLockedRefreshRate = {.tv_sec = 0, .tv_nsec = SEC2NANOSEC(0.2)},
