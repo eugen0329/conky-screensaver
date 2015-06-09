@@ -20,7 +20,6 @@ void tryReadConfFile(config_t* config, const char* confPath)
     if(! config_read_file(config, confPath)) {
       fprintf(stderr, "Conf error at %s, %d: %s\n",
               config_error_file(config), config_error_line(config), config_error_text(config));
-      exit(EXIT_FAILURE);
     }
 
 }

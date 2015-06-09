@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
 
     currState = onIdle;
     isActive = true;
+
     while (isActive) {
         (*currState)();
     }
@@ -239,6 +240,7 @@ void showUsage()
     for (i = 0; i < SIZE(cmdline_options) - 1; ++i) {
         printf(" -%c  --%s \n", cmdline_options[i].val, cmdline_options[i].name);
     }
+
     exit(EXIT_FAILURE);
 }
 
