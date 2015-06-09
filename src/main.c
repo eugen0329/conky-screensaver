@@ -69,9 +69,6 @@ void initDaemon(int argc, char *argv[])
     parseConfFile(configs);
     setDefaultConfigs(configs);
 
-
-
-
     snprintf(setDispCmd, sizeof(setDispCmd), "export DISPLAY=%s", configs->display);
     system(setDispCmd);
 

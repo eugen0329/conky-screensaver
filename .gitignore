@@ -6,6 +6,7 @@
 
 bin
 conky_screensaver
+conky-screensaver
 
 CMakeFiles/*
 Makefile
